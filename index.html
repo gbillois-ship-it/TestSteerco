@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber Academy Snake Validation</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: rgba(11, 24, 44, 0.92);
+      --panel-strong: #0e2038;
+      --accent: #38f8a6;
+      --accent-2: #3bbcff;
+      --danger: #ff5470;
+      --warn: #ffd166;
+      --text: #eef7ff;
+      --muted: #9fb3c8;
+      --grid: rgba(255, 255, 255, 0.045);
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.4);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(59, 188, 255, 0.18), transparent 28rem),
+        radial-gradient(circle at 80% 80%, rgba(56, 248, 166, 0.13), transparent 32rem),
+        linear-gradient(135deg, #04101d 0%, var(--bg) 50%, #09101a 100%);
+      color: var(--text);
+    }
+
+    main {
+      width: min(1100px, 95vw);
+      display: grid;
+      grid-template-columns: minmax(320px, 640px) minmax(280px, 1fr);
+      gap: 1.25rem;
+      align-items: stretch;
+      padding: 1.25rem 0;
+    }
+
+    .game-card, .info-card {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .game-card { padding: 1rem; }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.4rem 0.45rem 1rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 4vw, 2.25rem);
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin: 0.25rem 0 0;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(72px, 1fr));
+      gap: 0.6rem;
+      min-width: 250px;
+    }
+
+    .metric {
+      background: rgba(255, 255, 255, 0.055);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 0.65rem;
+      text-align: center;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 0.2rem;
+      font-size: 1.35rem;
+      color: var(--accent);
+    }
+
+    .board-wrap {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      border-radius: 22px;
+      overflow: hidden;
+      background: #071523;
+      border: 1px solid rgba(56, 248, 166, 0.22);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 5% 5%;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 1.25rem;
+      background: rgba(3, 10, 19, 0.78);
+      transition: opacity 180ms ease;
+    }
+
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .modal {
+      width: min(560px, 100%);
+      background: linear-gradient(180deg, rgba(17, 38, 67, 0.98), rgba(8, 20, 36, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .modal h2 { margin: 0 0 0.45rem; font-size: 1.55rem; }
+    .modal p { color: var(--muted); line-height: 1.5; }
+
+    .question-meta {
+      color: var(--accent-2);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .choices { display: grid; gap: 0.7rem; margin-top: 1rem; }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+      color: #05101d;
+      background: var(--accent);
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease, background 120ms ease;
+    }
+
+    button:hover, button:focus-visible { transform: translateY(-1px); filter: brightness(1.07); outline: none; }
+
+    .choice {
+      text-align: left;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.11);
+    }
+
+    .choice:hover, .choice:focus-visible { background: rgba(59, 188, 255, 0.16); }
+
+    .choice.correct { background: rgba(56, 248, 166, 0.24); border-color: var(--accent); }
+    .choice.incorrect { background: rgba(255, 84, 112, 0.2); border-color: var(--danger); }
+
+    .info-card { padding: 1.35rem; }
+    .info-card h2 { margin-top: 0; }
+    .info-card ul { padding-left: 1.2rem; color: var(--muted); line-height: 1.65; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin: 0.2rem 0.25rem 0.2rem 0;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      color: var(--text);
+      background: rgba(59, 188, 255, 0.13);
+      border: 1px solid rgba(59, 188, 255, 0.2);
+      font-size: 0.82rem;
+    }
+
+    .status {
+      min-height: 2rem;
+      margin-top: 1rem;
+      color: var(--warn);
+      font-weight: 700;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 56px);
+      justify-content: center;
+      gap: 0.45rem;
+      margin-top: 1rem;
+    }
+
+    .controls button { padding: 0.65rem; background: var(--panel-strong); color: var(--text); border: 1px solid rgba(255,255,255,0.1); }
+    .controls .empty { visibility: hidden; }
+
+    .validated { color: var(--accent); }
+    .not-validated { color: var(--danger); }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: stretch; }
+      .scoreboard { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="game-card" aria-label="Cybersecurity snake game">
+      <header>
+        <div>
+          <h1>Cyber Snake Validation</h1>
+          <p class="subtitle">Eat 10 blocks. Answer a cyber question after each one.</p>
+        </div>
+        <div class="scoreboard" aria-live="polite">
+          <div class="metric"><span>Blocks</span><strong id="blocks">0/10</strong></div>
+          <div class="metric"><span>Correct</span><strong id="correct">0</strong></div>
+          <div class="metric"><span>Length</span><strong id="length">3</strong></div>
+        </div>
+      </header>
+
+      <div class="board-wrap">
+        <canvas id="board" width="600" height="600" aria-label="Snake game board"></canvas>
+        <div class="overlay" id="overlay">
+          <div class="modal" id="modal"></div>
+        </div>
+      </div>
+
+      <div class="controls" aria-label="Touch controls">
+        <span class="empty"></span><button data-dir="up">▲</button><span class="empty"></span>
+        <button data-dir="left">◀</button><button data-dir="down">▼</button><button data-dir="right">▶</button>
+      </div>
+    </section>
+
+    <aside class="info-card">
+      <h2>How validation works</h2>
+      <ul>
+        <li>Use arrow keys, WASD, or the buttons to move the snake.</li>
+        <li>Each block pauses the game and asks one randomized cybersecurity question.</li>
+        <li>Questions are randomly drawn from a 30-question bank across IAM, GRC, SOC, and AI security.</li>
+        <li>Score above 8/10 to earn the final message: <strong class="validated">Skills validated</strong>.</li>
+      </ul>
+      <div>
+        <span class="pill">IAM</span><span class="pill">GRC</span><span class="pill">SOC</span><span class="pill">AI Security</span>
+      </div>
+      <p class="status" id="status">Ready to launch your assessment.</p>
+    </aside>
+  </main>
+
+  <script>
+    const questionBank = [
+      { domain: 'IAM', q: 'Which control best enforces least privilege for a cloud administrator?', choices: ['Give all admins owner access so emergencies are easier.', 'Review admin access once a year and remove obvious unused accounts.', 'Use role-based access, just-in-time elevation, MFA, and regular access reviews.'], answer: 2 },
+      { domain: 'IAM', q: 'What is the strongest reason to require MFA for privileged accounts?', choices: ['It makes passwords unnecessary in every system.', 'It reduces risk if a password is guessed or reused.', 'It guarantees phishing can never succeed.'], answer: 1 },
+      { domain: 'IAM', q: 'What should happen immediately when an employee leaves the organization?', choices: ['Wait until the next quarterly access review.', 'Disable accounts and revoke active sessions through a documented offboarding process.', 'Only remove access to financial systems.'], answer: 1 },
+      { domain: 'IAM', q: 'Which signal is most useful for detecting impossible travel?', choices: ['The user changed their profile photo.', 'Successful logins from distant locations within an unrealistic timeframe.', 'A user logged in during business hours.'], answer: 1 },
+      { domain: 'IAM', q: 'What is a service account best practice?', choices: ['Share one service account for all automation.', 'Use non-expiring credentials because automation must never stop.', 'Grant only required permissions, rotate secrets, and monitor usage.'], answer: 2 },
+      { domain: 'IAM', q: 'Which statement best describes identity federation?', choices: ['Every application stores its own password database.', 'A trusted identity provider authenticates users for multiple services.', 'A firewall decides which users are executives.'], answer: 1 },
+      { domain: 'IAM', q: 'Why should privileged access be logged separately and reviewed?', choices: ['Admins never make mistakes.', 'Privileged actions have higher impact and require accountability.', 'Logs are only needed after a public breach.'], answer: 1 },
+      { domain: 'GRC', q: 'What is the purpose of a risk register?', choices: ['To list every employee password.', 'To document risks, owners, likelihood, impact, treatments, and status.', 'To replace incident response plans.'], answer: 1 },
+      { domain: 'GRC', q: 'Which is the best example of a compensating control?', choices: ['Ignoring a missing patch forever.', 'Adding network segmentation and enhanced monitoring when an immediate patch cannot be applied.', 'Deleting the asset inventory.'], answer: 1 },
+      { domain: 'GRC', q: 'What does evidence collection support during an audit?', choices: ['It proves controls are designed and operating as claimed.', 'It guarantees regulators will waive all findings.', 'It is only useful if an incident occurs.'], answer: 0 },
+      { domain: 'GRC', q: 'Which metric is most relevant for vulnerability management governance?', choices: ['Number of desktop wallpapers changed.', 'Percentage of critical vulnerabilities remediated within SLA.', 'Number of meetings held by IT.'], answer: 1 },
+      { domain: 'GRC', q: 'What is the difference between risk appetite and risk tolerance?', choices: ['They are names for antivirus settings.', 'Appetite is the broad risk level accepted; tolerance defines measurable limits or thresholds.', 'Tolerance means ignoring all risk.'], answer: 1 },
+      { domain: 'GRC', q: 'What should a business impact analysis identify?', choices: ['Only the office seating plan.', 'Critical processes, dependencies, recovery priorities, and acceptable downtime.', 'Every possible software feature request.'], answer: 1 },
+      { domain: 'GRC', q: 'Why map controls to a framework such as NIST CSF or ISO 27001?', choices: ['To make security purely theoretical.', 'To align activities to recognized outcomes and demonstrate coverage.', 'To avoid testing controls.'], answer: 1 },
+      { domain: 'SOC', q: 'What is the first priority in incident response after confirming a real threat?', choices: ['Post details publicly immediately.', 'Contain the threat while preserving evidence and coordinating stakeholders.', 'Turn off all logging to save disk space.'], answer: 1 },
+      { domain: 'SOC', q: 'What makes a high-quality detection rule?', choices: ['It alerts on all network traffic.', 'It has a clear threat hypothesis, useful telemetry, low noise, and tuning guidance.', 'It only works during office hours.'], answer: 1 },
+      { domain: 'SOC', q: 'Which event is most suspicious for ransomware activity?', choices: ['One user opens a spreadsheet.', 'Many files are rapidly renamed and encrypted from one endpoint.', 'A printer runs out of paper.'], answer: 1 },
+      { domain: 'SOC', q: 'What is the value of threat intelligence in SOC triage?', choices: ['It replaces analyst judgment.', 'It adds context such as known indicators, tactics, and adversary behavior.', 'It makes patching unnecessary.'], answer: 1 },
+      { domain: 'SOC', q: 'Which log source is most useful for investigating suspicious PowerShell execution?', choices: ['Endpoint process and script block logs.', 'Cafeteria menu logs.', 'Only public DNS registration data.'], answer: 0 },
+      { domain: 'SOC', q: 'What does mean time to respond measure?', choices: ['How fast the SOC buys tools.', 'The average time from detection or alert to effective response actions.', 'How long employees take lunch.'], answer: 1 },
+      { domain: 'SOC', q: 'Why run post-incident lessons learned?', choices: ['To assign blame only.', 'To improve controls, playbooks, communication, and future readiness.', 'To delete all incident records.'], answer: 1 },
+      { domain: 'AI Security', q: 'What is prompt injection?', choices: ['A safe way to speed up model training.', 'An attempt to make an AI system ignore instructions or reveal protected data through crafted input.', 'A network cable for GPUs.'], answer: 1 },
+      { domain: 'AI Security', q: 'Which control helps prevent sensitive data leakage to an AI assistant?', choices: ['Paste production secrets because the model needs context.', 'Use data classification, redaction, access controls, and approved AI tools.', 'Disable all user training.'], answer: 1 },
+      { domain: 'AI Security', q: 'What is model hallucination risk?', choices: ['The model always refuses to answer.', 'The model can produce confident but incorrect or fabricated information.', 'The model physically damages servers.'], answer: 1 },
+      { domain: 'AI Security', q: 'Why should AI-generated code be reviewed before production?', choices: ['AI code is automatically compliant.', 'It may include insecure patterns, license issues, or logic errors.', 'Reviewing code makes it impossible to ship.'], answer: 1 },
+      { domain: 'AI Security', q: 'What is a strong control for AI tool governance?', choices: ['Allow every employee to use any consumer AI with confidential data.', 'Maintain an approved tool catalog, usage policy, monitoring, and risk assessment.', 'Ban documentation.'], answer: 1 },
+      { domain: 'AI Security', q: 'What does retrieval-augmented generation security need to consider?', choices: ['Only font size.', 'Source authorization, data freshness, poisoning resistance, and output validation.', 'Whether users like the colors.'], answer: 1 },
+      { domain: 'AI Security', q: 'What is data poisoning?', choices: ['Encrypting backups.', 'Manipulating training or retrieval data to influence model behavior maliciously.', 'Changing a monitor cable.'], answer: 1 },
+      { domain: 'AI Security', q: 'Which test is useful before deploying an AI chatbot?', choices: ['Only checking if it says hello.', 'Red-team prompts for policy bypass, data leakage, unsafe advice, and tool misuse.', 'Counting the number of emojis it uses.'], answer: 1 },
+      { domain: 'AI Security', q: 'Why limit AI agent tool permissions?', choices: ['Agents should have unrestricted production admin rights.', 'Constrained permissions reduce blast radius if the agent is manipulated or fails.', 'Permissions do not apply to software.'], answer: 1 }
+    ];
+
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const modal = document.getElementById('modal');
+    const blocksEl = document.getElementById('blocks');
+    const correctEl = document.getElementById('correct');
+    const lengthEl = document.getElementById('length');
+    const statusEl = document.getElementById('status');
+    const gridSize = 20;
+    const cellSize = canvas.width / gridSize;
+    const targetQuestions = 10;
+
+    let snake, direction, nextDirection, food, gameTimer, paused, finished, correctAnswers, questions, questionIndex;
+
+    function shuffle(items) {
+      return [...items].sort(() => Math.random() - 0.5);
+    }
+
+    function resetGame() {
+      snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+      direction = { x: 1, y: 0 };
+      nextDirection = { x: 1, y: 0 };
+      correctAnswers = 0;
+      questionIndex = 0;
+      paused = true;
+      finished = false;
+      questions = shuffle(questionBank).slice(0, targetQuestions);
+      placeFood();
+      updateStats();
+      draw();
+      showStart();
+    }
+
+    function startGame() {
+      paused = false;
+      overlay.classList.add('hidden');
+      statusEl.textContent = 'Assessment in progress. Capture the next block.';
+      clearInterval(gameTimer);
+      gameTimer = setInterval(tick, 115);
+    }
+
+    function placeFood() {
+      do {
+        food = { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) };
+      } while (snake.some(segment => segment.x === food.x && segment.y === food.y));
+    }
+
+    function tick() {
+      if (paused || finished) return;
+      direction = nextDirection;
+      const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+      if (head.x < 0 || head.y < 0 || head.x >= gridSize || head.y >= gridSize || snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+        gameOver('Snake collision detected. Restart and keep validating.');
+        return;
+      }
+
+      snake.unshift(head);
+      if (head.x === food.x && head.y === food.y) {
+        paused = true;
+        clearInterval(gameTimer);
+        askQuestion();
+      } else {
+        snake.pop();
+      }
+      updateStats();
+      draw();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#071523';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#ffcf5a';
+      roundedRect(food.x * cellSize + 4, food.y * cellSize + 4, cellSize - 8, cellSize - 8, 8);
+
+      snake.forEach((segment, index) => {
+        const gradient = ctx.createLinearGradient(segment.x * cellSize, segment.y * cellSize, (segment.x + 1) * cellSize, (segment.y + 1) * cellSize);
+        gradient.addColorStop(0, index === 0 ? '#3bbcff' : '#38f8a6');
+        gradient.addColorStop(1, index === 0 ? '#38f8a6' : '#18b57b');
+        ctx.fillStyle = gradient;
+        roundedRect(segment.x * cellSize + 3, segment.y * cellSize + 3, cellSize - 6, cellSize - 6, 7);
+      });
+    }
+
+    function roundedRect(x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, radius);
+      ctx.fill();
+    }
+
+    function askQuestion() {
+      const current = questions[questionIndex];
+      statusEl.textContent = 'Game paused. Answer the validation question to continue.';
+      modal.innerHTML = `
+        <div class="question-meta">${current.domain} • Question ${questionIndex + 1} of ${targetQuestions}</div>
+        <h2>${current.q}</h2>
+        <p>Choose the strongest answer. The snake resumes after your response.</p>
+        <div class="choices">
+          ${current.choices.map((choice, index) => `<button class="choice" data-choice="${index}">${choice}</button>`).join('')}
+        </div>
+      `;
+      overlay.classList.remove('hidden');
+      modal.querySelectorAll('.choice').forEach(button => button.addEventListener('click', handleAnswer));
+    }
+
+    function handleAnswer(event) {
+      const selected = Number(event.currentTarget.dataset.choice);
+      const current = questions[questionIndex];
+      const buttons = modal.querySelectorAll('.choice');
+      buttons.forEach((button, index) => {
+        button.disabled = true;
+        if (index === current.answer) button.classList.add('correct');
+        if (index === selected && selected !== current.answer) button.classList.add('incorrect');
+      });
+
+      if (selected === current.answer) {
+        correctAnswers += 1;
+        statusEl.textContent = 'Correct. Nice cyber judgment.';
+      } else {
+        statusEl.textContent = 'Not quite. Review the highlighted correct answer.';
+      }
+
+      questionIndex += 1;
+      updateStats();
+      setTimeout(() => {
+        if (questionIndex >= targetQuestions) {
+          finishGame();
+        } else {
+          placeFood();
+          overlay.classList.add('hidden');
+          paused = false;
+          gameTimer = setInterval(tick, 115);
+          statusEl.textContent = 'Assessment resumed. Capture the next block.';
+          draw();
+        }
+      }, 1200);
+    }
+
+    function finishGame() {
+      finished = true;
+      clearInterval(gameTimer);
+      const validated = correctAnswers > 8;
+      statusEl.textContent = validated ? 'Skills validated.' : 'Additional practice recommended.';
+      modal.innerHTML = `
+        <h2 class="${validated ? 'validated' : 'not-validated'}">${validated ? 'Skills validated' : 'Validation incomplete'}</h2>
+        <p>You answered <strong>${correctAnswers}/${targetQuestions}</strong> questions correctly.</p>
+        <p>${validated ? 'Excellent performance across IAM, GRC, SOC, and AI security.' : 'Score above 8/10 to validate this module. Replay to try a fresh randomized set.'}</p>
+        <button id="restart">Play again</button>
+      `;
+      overlay.classList.remove('hidden');
+      document.getElementById('restart').addEventListener('click', resetGame);
+    }
+
+    function gameOver(message) {
+      paused = true;
+      clearInterval(gameTimer);
+      statusEl.textContent = message;
+      modal.innerHTML = `
+        <h2>Snake down</h2>
+        <p>${message}</p>
+        <p>Your question progress remains at ${questionIndex}/${targetQuestions}. Restart for a fresh validation run.</p>
+        <button id="restart">Restart</button>
+      `;
+      overlay.classList.remove('hidden');
+      document.getElementById('restart').addEventListener('click', resetGame);
+    }
+
+    function showStart() {
+      modal.innerHTML = `
+        <h2>Begin cyber validation</h2>
+        <p>Guide the snake to each block. Every block triggers one question from a randomized 10-question assessment.</p>
+        <button id="start">Start assessment</button>
+      `;
+      overlay.classList.remove('hidden');
+      document.getElementById('start').addEventListener('click', startGame);
+    }
+
+    function updateStats() {
+      blocksEl.textContent = `${questionIndex}/${targetQuestions}`;
+      correctEl.textContent = correctAnswers;
+      lengthEl.textContent = snake.length;
+    }
+
+    function changeDirection(dir) {
+      const vectors = {
+        up: { x: 0, y: -1 },
+        down: { x: 0, y: 1 },
+        left: { x: -1, y: 0 },
+        right: { x: 1, y: 0 }
+      };
+      const chosen = vectors[dir];
+      if (!chosen || (chosen.x + direction.x === 0 && chosen.y + direction.y === 0)) return;
+      nextDirection = chosen;
+    }
+
+    document.addEventListener('keydown', event => {
+      const map = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down', ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
+      if (map[event.key]) {
+        event.preventDefault();
+        changeDirection(map[event.key]);
+      }
+    });
+
+    document.querySelectorAll('[data-dir]').forEach(button => {
+      button.addEventListener('click', () => changeDirection(button.dataset.dir));
+    });
+
+    resetGame();
+  </script>
+</body>
+</html>
